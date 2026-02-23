@@ -1,0 +1,49 @@
+.provider-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.provider-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.9rem;
+}
+
+.provider-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.provider-button.active {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.provider-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.provider-icon {
+  font-size: 1.2rem;
+}
+
+.provider-name {
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .provider-name {
+    display: none;
+  }
+  
+  .provider-button {
+    padding: 8px;
+  }
+}

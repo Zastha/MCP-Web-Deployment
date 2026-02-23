@@ -7,6 +7,11 @@ interface MessageInputProps {
   disabled: boolean;
 }
 
+/*Component for the message input area in the chat interface.
+Provides a textarea for the user to type their message and a button to send it.
+Handles form submission and keyboard events for sending messages.
+V.1.0.0
+08/02/2026*/
 export default function MessageInput({ onSendMessage, disabled }: MessageInputProps) {
   const [input, setInput] = useState('');
 

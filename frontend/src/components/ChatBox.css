@@ -17,6 +17,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .chat-header h1 {
@@ -66,6 +74,16 @@
   background: #e0e7ff;
   border-radius: 12px;
   margin-top: 16px;
+}
+
+.loading-indicator p {
+  margin: 0;
+}
+
+.processing-status {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #4c1d95;
 }
 
 .typing-animation {

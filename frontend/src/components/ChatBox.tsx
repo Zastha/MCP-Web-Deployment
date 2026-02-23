@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import type { Message } from '../types/chat';
-import { sendMessage } from '../services/api';
+import type { LLMProvider, Message } from '../types/chat';
+import { getMessageStatus, sendMessage } from '../services/api';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
+import ProviderSelector from './ProviderSelector';
 import './ChatBox.css';
 
 /*Main component for the chat interface.
@@ -14,6 +15,8 @@ export default function ChatBox() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<LLMProvider>('claude');
+  const [processingStatus, setProcessingStatus] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll al último mensaje
@@ -22,6 +25,23 @@ export default function ChatBox() {
   }, [messages]);
 
   const handleSendMessage = async (content: string) => {
+    const requestId = globalThis.crypto?.randomUUID?.() ?? `req-${Date.now()}`;
+    let shouldStopPolling = false;
+
+    const statusInterval = window.setInterval(async () => {
+      if (shouldStopPolling) {
+        return;
+      }
+
+      try {
+        const statusResponse = await getMessageStatus(requestId);
+        const detail = statusResponse.data.details?.trim();
+        setProcessingStatus(detail || statusResponse.data.status);
+      } catch {
+        setProcessingStatus((previous) => previous || 'Procesando...');
+      }
+    }, 900);
+
     const userMessage: Message = {
       role: 'user',
       content,
@@ -31,9 +51,10 @@ export default function ChatBox() {
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
     setError(null);
+    setProcessingStatus('Enviando solicitud...');
 
     try {
-      const response = await sendMessage(content, messages);
+      const response = await sendMessage(content, messages, selectedProvider, undefined, requestId);
 
       const assistantMessage: Message = {
         role: 'assistant',
@@ -56,7 +77,10 @@ export default function ChatBox() {
 
       setMessages((prev) => [...prev, assistantErrorMessage]);
     } finally {
+      shouldStopPolling = true;
+      window.clearInterval(statusInterval);
       setLoading(false);
+      setProcessingStatus(null);
     }
   };
 
@@ -70,14 +94,21 @@ export default function ChatBox() {
   return (
     <div className="chat-box">
       <div className="chat-header">
-        <h1>🤖 Chat con Claude + MCP</h1>
-        <button
-          onClick={handleClearChat}
-          className="clear-button"
-          disabled={loading || messages.length === 0}
-        >
-          🗑️ Limpiar
-        </button>
+        <h1>🤖 Chat Multi-LLM + MCP</h1>
+        <div className="header-actions">
+          <ProviderSelector 
+            selected={selectedProvider} 
+            onChange={setSelectedProvider}
+            disabled={loading}
+          />
+          <button
+            onClick={handleClearChat}
+            className="clear-button"
+            disabled={loading || messages.length === 0}
+          >
+            🗑️ Limpiar
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -95,7 +126,10 @@ export default function ChatBox() {
               <span></span>
               <span></span>
             </div>
-            <p>Claude está pensando...</p>
+            <div>
+              <p>{selectedProvider === 'claude' ? 'Claude' : selectedProvider === 'openai' ? 'ChatGPT' : 'Gemini'} está pensando...</p>
+              {processingStatus && <p className="processing-status">{processingStatus}</p>}
+            </div>
           </div>
         )}
         <div ref={messagesEndRef} />

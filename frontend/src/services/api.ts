@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Message, ChatResponse, ApiError } from '../types/chat';
+import type { Message, ChatResponse, ChatStatusResponse, ApiError, LLMProvider } from '../types/chat';
 
 const API_BASE_URL = 'http://localhost:3000/api';
 
@@ -19,15 +19,32 @@ const apiClient = axios.create({
 Accepts the user's message and the conversation history, then sends a POST request to the backend.
 Returns a promise that resolves with the chat response or rejects with an API error.
 V.1.0.0"
-08/02/2026*/
+08/02/2026
+Added provider parameter to specify which language model provider to use for the chat response.
+v.1.1.0
+20/02/2026
+*/
 export async function sendMessage(
   message: string,
-  conversationHistory: Message[] = []
+  conversationHistory: Message[] = [],
+  provider: LLMProvider = 'claude',
+  contextKey?: string,
+  requestId?: string
 ): Promise<ChatResponse> {
   try {
+    // ✓ Convierte Message[] a formato que espera el backend
+    const formattedHistory = conversationHistory.map(msg => ({
+      role: msg.role,
+      content: msg.content
+      // ← Solo role y content, sin timestamp
+    }));
+
     const response = await apiClient.post<ChatResponse>('/chat/message', {
       message,
-      conversationHistory,
+      conversationHistory: formattedHistory,
+      provider,
+      contextKey,
+      requestId,
     });
 
     return response.data;
@@ -42,6 +59,11 @@ export async function sendMessage(
     }
     throw error;
   }
+}
+
+export async function getMessageStatus(requestId: string): Promise<ChatStatusResponse> {
+  const response = await apiClient.get<ChatStatusResponse>(`/chat/status/${encodeURIComponent(requestId)}`);
+  return response.data;
 }
 
 export default apiClient;
