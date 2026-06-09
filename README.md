@@ -311,6 +311,6 @@ Este proyecto fue desarrollado bajo el marco institucional del **Tecnológico Na
 * **Encargado del Desarrollo y Arquitectura:** René Zaid Zazueta Rivas
 
 <p>
-  <img src="assets/logo_tecnm_2019.webp" alt="TecNM Campus Culiacán" width="250"/>
+  <img src="https://imgs.search.brave.com/4kwEedyztcEHIQgh4ChRTj3jL6plzW0iGRMlEp1eRb4/rs:fit:860:0:0:0/g:ce/aHR0cDovL2l0Y2hp/aHVhaHVhLm14L3dw/LWNvbnRlbnQvdXBs/b2Fkcy8yMDE1LzA5/L1RlY05NMS5qcGc" alt="TecNM Campus Culiacán" width="250"/>
   
 </p>
