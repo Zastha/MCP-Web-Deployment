@@ -4,7 +4,7 @@ dotenv.config();
 
 export const env = {
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-  OPENAI_API_KEY:    process.env.OPENAI_API_KEY,
+  OPENAI_API_KEY:    process.env.OPEN_AI_API_KEY,
   GOOGLE_API_KEY:    process.env.GOOGLE_API_KEY,
 
   ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',

@@ -21,8 +21,6 @@ class MCPService {
     }
 
     logger.info('🔄 Initializing MCP connections...');
-
-    // Verificar si Docker está disponible
     this.dockerAvailable = await dockerService.isDockerAvailable();
     
     if (this.dockerAvailable) {
@@ -33,12 +31,10 @@ class MCPService {
 
     for (const config of mcpConfig.servers) {
       try {
-        // Si es un MCP de Docker y Docker no está disponible, saltar
         if (config.type === 'docker' && !this.dockerAvailable) {
           logger.warn(`⏭️  Saltando ${config.name} (requiere Docker)`);
           continue;
         }
-
         await this.connectMCP(config);
       } catch (error) {
         logger.error(`❌ Failed to connect ${config.name}:`, error.message);
@@ -67,7 +63,6 @@ class MCPService {
     const { tools } = await client.listTools();
     
     this.clients.set(config.name, client);
-    
     this.tools.push(...tools.map(tool => ({
       ...tool,
       mcpSource: config.name
@@ -82,35 +77,23 @@ class MCPService {
 
   normalizeJsonSchema(schema) {
     if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
-      return {
-        type: 'object',
-        properties: {},
-      };
+      return { type: 'object', properties: {} };
     }
 
     const cloned = JSON.parse(JSON.stringify(schema));
-
     const normalizeNode = (node) => {
-      if (!node || typeof node !== 'object') {
-        return node;
-      }
-
-      if (Array.isArray(node)) {
-        return node.map(normalizeNode);
-      }
+      if (!node || typeof node !== 'object') return node;
+      if (Array.isArray(node)) return node.map(normalizeNode);
 
       const result = { ...node };
-
       if (Object.prototype.hasOwnProperty.call(result, 'id') && !result.$id) {
         result.$id = result.id;
         delete result.id;
       }
-
       if (result.definitions && !result.$defs) {
         result.$defs = result.definitions;
         delete result.definitions;
       }
-
       if (result.nullable === true) {
         if (typeof result.type === 'string') {
           result.type = [result.type, 'null'];
@@ -119,30 +102,6 @@ class MCPService {
         }
         delete result.nullable;
       }
-
-      if (Array.isArray(result.items)) {
-        result.prefixItems = result.items.map(normalizeNode);
-        delete result.items;
-      }
-
-      if (typeof result.exclusiveMinimum === 'boolean') {
-        if (result.exclusiveMinimum === false) {
-          delete result.exclusiveMinimum;
-        } else if (typeof result.minimum === 'number') {
-          result.exclusiveMinimum = result.minimum;
-          delete result.minimum;
-        }
-      }
-
-      if (typeof result.exclusiveMaximum === 'boolean') {
-        if (result.exclusiveMaximum === false) {
-          delete result.exclusiveMaximum;
-        } else if (typeof result.maximum === 'number') {
-          result.exclusiveMaximum = result.maximum;
-          delete result.maximum;
-        }
-      }
-
       if (result.properties && typeof result.properties === 'object' && !Array.isArray(result.properties)) {
         const normalizedProperties = {};
         for (const [key, value] of Object.entries(result.properties)) {
@@ -150,51 +109,10 @@ class MCPService {
         }
         result.properties = normalizedProperties;
       }
-
-      if (result.items && typeof result.items === 'object') {
-        result.items = normalizeNode(result.items);
-      }
-
-      if (result.additionalProperties && typeof result.additionalProperties === 'object') {
-        result.additionalProperties = normalizeNode(result.additionalProperties);
-      }
-
-      if (result.$defs && typeof result.$defs === 'object') {
-        const normalizedDefs = {};
-        for (const [key, value] of Object.entries(result.$defs)) {
-          normalizedDefs[key] = normalizeNode(value);
-        }
-        result.$defs = normalizedDefs;
-      }
-
-      for (const keyword of ['allOf', 'anyOf', 'oneOf']) {
-        if (Array.isArray(result[keyword])) {
-          result[keyword] = result[keyword].map(normalizeNode);
-        }
-      }
-
-      if (result.not && typeof result.not === 'object') {
-        result.not = normalizeNode(result.not);
-      }
-
       return result;
     };
 
-    const normalized = normalizeNode(cloned);
-
-    if (typeof normalized.type !== 'string' && !Array.isArray(normalized.type)) {
-      normalized.type = 'object';
-    }
-
-    if (normalized.type === 'object' && (typeof normalized.properties !== 'object' || Array.isArray(normalized.properties))) {
-      normalized.properties = {};
-    }
-
-    if (normalized.required && !Array.isArray(normalized.required)) {
-      normalized.required = [];
-    }
-
-    return normalized;
+    return normalizeNode(cloned);
   }
 
   getToolsForClaude() {
@@ -221,12 +139,6 @@ class MCPService {
       }));
   }
 
-  /**
-   * Subset de tools para OpenAI y Gemini.
-   * Solo 16 tools esenciales del workflow de webscraping.
-   * Razon: con 104 tools el payload consume ~18,000 tokens antes de procesar
-   * el mensaje del usuario — superando el límite de 30,000 TPM.
-   */
   static get OPENAI_ALLOWED_TOOLS() {
     return new Set([
       'connect', 'find', 'insert-many',
@@ -257,33 +169,8 @@ class MCPService {
     return this.getToolsForOpenAI();
   }
 
-  getToolsGroupedByMCP() {
-    const groups = {};
-    
-    this.tools.forEach(tool => {
-      const mcpName = tool.mcpSource || 'unknown';
-      
-      if (!groups[mcpName]) {
-        groups[mcpName] = {
-          mcpName: mcpName,
-          tools: []
-        };
-      }
-      
-      groups[mcpName].tools.push(tool);
-    });
-    
-    return groups;
-  }
-
   async enforceWhitelistForToolCall(tool, args) {
-    if (!env.WHITELIST_ENFORCEMENT_ENABLED) {
-      return;
-    }
-
-    if (tool?.mcpSource === 'mongodb') {
-      return;
-    }
+    if (!env.WHITELIST_ENFORCEMENT_ENABLED || tool?.mcpSource === 'mongodb') return;
 
     const validation = await whitelistService.validateUrlsAgainstWhitelist(
       JSON.stringify(args ?? {})
@@ -298,45 +185,41 @@ class MCPService {
 
   async callTool(toolName, args) {
     logger.info(`🔧 callTool: ${toolName}`, JSON.stringify(args, null, 2));
-    const tool = this.tools.find(t => t.name === toolName);
+    
+    let tool = this.tools.find(t => t.name === toolName);
+    if (!tool) {
+      const normalizedName = toolName.replace(/_/g, '-');
+      tool = this.tools.find(t => t.name === normalizedName);
+    }
     
     if (!tool) {
-      throw new Error(`Tool ${toolName} not found`);
+      throw new Error(`Tool ${toolName} no encontrada en el ecosistema MCP`);
     }
 
     const client = this.clients.get(tool.mcpSource);
-    
     if (!client) {
-      throw new Error(`MCP ${tool.mcpSource} not connected`);
+      throw new Error(`MCP ${tool.mcpSource} no conectado`);
     }
 
     await this.enforceWhitelistForToolCall(tool, args);
-
-    const result = await client.callTool({
-      name: toolName,
+    return await client.callTool({
+      name: tool.name, // Ejecuta usando el nombre real nativo registrado
       arguments: args
     });
-
-    return result;
   }
 
   async cleanup() {
     logger.info('🔄 Closing MCP connections...');
-    
     for (const [name, client] of this.clients) {
       try {
         await client.close();
-        logger.info(`  ✓ ${name} closed`);
       } catch (error) {
-        logger.error(`  ❌ Error closing ${name}:`, error.message);
+        logger.error(`Error al cerrar ${name}:`, error.message);
       }
     }
-    
-    // Detener contenedores de Docker
     if (this.dockerAvailable) {
       await dockerService.stopAllContainers();
     }
-    
     this.clients.clear();
     this.tools = [];
     this.initialized = false;

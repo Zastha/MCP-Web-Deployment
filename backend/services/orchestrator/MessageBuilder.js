@@ -22,7 +22,6 @@ export function extractToolUses(response) {
         name:  part.name,
         input: part.input || {}
       }));
-
     toolUses.push(...claudeToolUses);
   }
 
@@ -34,28 +33,24 @@ export function extractToolUses(response) {
         name:  toolCall.function.name,
         input: safeParseArguments(toolCall.function.arguments)
       }));
-
     toolUses.push(...openAIToolUses);
   }
 
   return toolUses;
 }
 
-
 function generateToolId() {
   return `tool_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-
 function safeParseArguments(argumentsStr) {
   if (!argumentsStr) return {};
   try {
-    return JSON.parse(argumentsStr);
+    return typeof argumentsStr === 'string' ? JSON.parse(argumentsStr) : argumentsStr;
   } catch {
     return {};
   }
 }
-
 
 export function appendToolResultsToMessages({ messages, provider, response, toolUses, toolResults }) {
   if (provider === 'claude') {
@@ -73,21 +68,21 @@ export function appendToolResultsToMessages({ messages, provider, response, tool
         ...(is_error ? { is_error: true } : {})
       }))
     });
-
   } else {
     messages.push({
       role: 'assistant',
-      content: `Llamé ${toolUses.length} tool(s): ${toolUses.map((t) => t.name).join(', ')}`
+      content: response.content?.[0]?.text || null,
+      tool_calls: response.tool_calls || []
     });
 
-    messages.push({
-      role: 'user',
-      content: toolResults
-        .map((result) => {
-          const status = result.is_error ? 'ERROR' : 'OK';
-          return `Resultado Tool [${status}] ${result.name}:\n${result.content}`;
-        })
-        .join('\n\n')
+    toolResults.forEach((result, index) => {
+      const toolUse = toolUses[index];
+      messages.push({
+        role: 'tool',
+        tool_call_id: toolUse?.id || result.tool_use_id,
+        name: toolUse?.name || result.name,
+        content: typeof result.content === 'string' ? result.content : JSON.stringify(result.content)
+      });
     });
   }
 }
