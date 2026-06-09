@@ -10,9 +10,9 @@ export const mcpConfig = {
       args: [
         '-y', 
         '@modelcontextprotocol/server-filesystem', 
-        'C:/Users/Sarah/OneDrive/Documents/ProyectoServicio/backend',
-        'C:/Users/Sarah/MCP/Work',
-        'C:/Users/Sarah/MCP/Projects'
+        process.env.MCP_FS_BACKEND_PATH || './',
+        process.env.MCP_FS_WORK_PATH || './',
+        process.env.MCP_FS_PROJECTS_PATH || './'
       ]
     },
     
@@ -69,7 +69,7 @@ export const mcpConfig = {
       docker: {
         image: 'mcp-mistral-ocr:latest',
         ports: ['8403:8000'],
-        volumes: ['C:/Users/Sarah/MCP/OCR_Files:/data/ocr'],
+        volumes: [`${process.env.MCP_OCR_VOLUME_PATH || './ocr_data'}:/data/ocr`],
         env: {
           MISTRAL_API_KEY: process.env.MISTRAL_API_KEY,
           OCR_DIR: '/data/ocr'
@@ -87,7 +87,7 @@ export const mcpConfig = {
         '-e',
         'OCR_DIR=/data/ocr',
         '-v',
-        'C:/Users/Sarah/MCP/OCR_Files:/data/ocr',
+        `${process.env.MCP_OCR_VOLUME_PATH || './ocr_data'}:/data/ocr`,
         'mcp-mistral-ocr:latest'
       ]
     },

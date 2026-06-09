@@ -1,14 +1,18 @@
-# MCP Web Deployment - AI Orchestrator & Fullstack Platform
+# MCP Dynamic WebScraper - Trusted Market Intelligence Platform
 
-Este proyecto es una plataforma fullstack modular diseñada para la integración, gestión y orquestación inteligente de Modelos de Lenguaje de Gran Escala (LLMs) como Claude, ChatGPT y Gemini, utilizando la especificación nativa de **Model Context Protocol (MCP)**. 
+Este proyecto es un **Webscraper inteligente y autónomo** diseñado para la búsqueda, extracción y consolidación de datos e indicadores económicos provenientes exclusivamente de **fuentes oficiales y de confianza** preestablecidas por el usuario (como INEGI, Banxico, CONEVAL, etc.). 
 
-La plataforma cuenta con un backend desacoplado que ejecuta flujos multi-herramienta automatizados (`ToolLoop`) y un frontend reactivo en tiempo real con streaming de estados de procesamiento.
+A través del **Model Context Protocol (MCP)**, los modelos de lenguaje se transforman en agentes de extracción capaces de ejecutar herramientas avanzadas de navegación, lectura de documentos estructurados y almacenamiento semántico en un entorno completamente auditado y restringido por listas de permisos (*Whitelist Enforcement*).
+
+El proyecto soporta dos modalidades de despliegue:
+1. **Modalidad Web Fullstack**: Interfaz web interactiva (React/Vite) con arquitectura asíncrona por *polling* para scraping de larga duración sin cortes por timeout de red.
+2. **Modalidad Claude Desktop**: Integración directa del ecosistema completo de servidores MCP (locales y Dockerizados) dentro de la aplicación de escritorio oficial de Anthropic.
 
 ---
 
-## 🏗️ Arquitectura General del Sistema
+## 🏗️ Arquitectura General del Sistema (Modo Web)
 
-El ecosistema se divide en un cliente de interfaz SPA, un servidor orquestador de API y un clúster de microservicios MCP ejecutados nativamente o a través de contenedores aislados.
+El ecosistema web divide el flujo de raspado entre un cliente reactivo, un orquestador asíncrono en Express y un clúster de microservicios MCP aislados.
 
 ```mermaid
 graph TD
@@ -17,8 +21,8 @@ graph TD
         B -->|2. Polling /status & /result| A
     end
 
-    subgraph Backend [Orquestador Central - Express Node.js]
-        C[Chat Router] -->|Encola en background| D[Orquestador Principal]
+    subgraph Backend [Orquestador de Scraping - Node.js]
+        C[Chat Router] -->|Encola en background| D[Orquestador Core - ToolLoop]
         C -->|Respuesta Inmediata| B
         D -->|Caché Semántica / Whitelist| E[(MongoDB Atlas)]
         D -->|Factoría de Modelos| F[LLM Factory]
@@ -31,43 +35,18 @@ graph TD
     end
 
     subgraph MCP_Cluster [Ecosistema de Servidores MCP]
-        D -->|Ejección STDIO / Docker| J[mcpService]
-        J -->|Herramientas de Red| K[Puppeteer MCP]
-        J -->|Estructuras Locales| L[Filesystem / CSV / PDF MCP]
-        J -->|Persistencia MCP| M[MongoDB MCP Server]
+        D -->|Eyección STDIO / Docker| J[mcpService]
+        J -->|Navegación Dinámica| K[Puppeteer MCP]
+        J -->|Estructuras y Tabulados| L[CSV Editor / PDF Reader MCP]
+        J -->|Persistencia e Historial| M[MongoDB MCP Server]
     end
 ```
 
 ---
 
-## 📂 Estructura del Repositorio
+## ⚙️ Flujo Asíncrono de Scraping (Evita HTTP Timeout)
 
-```text
-├── backend/                       # Servidor Node.js (Express & Orchestrator)
-│   ├── config/                    # Entornos y mcpConfig.js (Mapeo de servidores)
-│   ├── controllers/               # Controladores de la API (chatController.js async)
-│   ├── middlewares/               # Validaciones de esquemas y errorHandler.js
-│   ├── routes/                    # Definición de endpoints expuestos
-│   └── services/                  # Capa lógica de infraestructura
-│       ├── orchestrator/          # Lógica central del ToolLoop y ContextBuilder
-│       ├── claudeService.js       # Integración SDK Anthropic
-│       ├── geminiService.js       # Integración Google Generative AI (Identity-Shot)
-│       ├── openaiService.js       # Integración OpenAI Core (Strict Schemas)
-│       └── mcpService.js          # Core de conexión, filtrado y normalización MCP
-│
-└── frontend/                      # Cliente SPA (React + TypeScript + Vite)
-    ├── src/
-    │   ├── components/            # UI Components (ChatBox, MessageInput, MessageList)
-    │   ├── services/              # Cliente HTTP (api.ts - Mecanismo de Polling)
-    │   └── types/                 # Tipados estáticos TypeScript de la app
-    └── vite.config.ts             # Configuración de compilación de Vite
-```
-
----
-
-## ⚙️ Arquitectura Asíncrona (Mecanismo de Polling)
-
-Para evitar caídas por *Timeout* de red HTTP durante ejecuciones largas de web scraping o procesamiento masivo de datos, la plataforma utiliza un flujo completamente desacoplado mediante identificadores únicos (`requestId`):
+Dado que el web scraping profundo y el procesamiento de PDFs de gobierno pueden demorar más allá de los límites de un request HTTP tradicional, la plataforma utiliza un mecanismo desacoplado mediante identificadores únicos (`requestId`):
 
 ```mermaid
 sequenceDiagram
@@ -78,13 +57,13 @@ sequenceDiagram
     participant ORQ as Orquestador Core
     participant LLM as Proveedor LLM
 
-    Usuario->>FE: Escribe consulta y presiona Enviar
+    Usuario->>FE: Solicita un dato (ej: PIB 2025 de la ENOE)
     FE->>BE: POST /api/chat/message (Payload + Historial)
     Note over BE: Valida estructura y genera requestId
     BE-->>FE: Responde inmediato: { success: true, requestId }
     Note over FE: Activa pantalla de carga y arranca Polling cada 700ms
 
-    par Procesamiento en Background
+    par Procesamiento de Scraping en Background
         BE->>ORQ: Invoca processUserMessage() en segundo plano
         activate ORQ
         ORQ->>LLM: Inicia ciclo ToolLoop / Inyección de Contextos
@@ -93,23 +72,23 @@ sequenceDiagram
         loop Cada 700ms hasta finalización
             FE->>BE: GET /api/chat/status/:requestId
             BE-->>FE: Retorna estado de progreso (ej: 'tool_executing')
-            Note over FE: Renderiza log dinámico en la UI
+            Note over FE: Renderiza log de herramientas en la UI
         end
     end
 
-    Note over ORQ: Orquestador finaliza y ejecuta .complete()
+    Note over ORQ: Extracción exitosa y persistencia en DB
     ORQ->>BE: Guarda payload final en memoria (TTL 10min)
     FE->>BE: Polling detecta status: 'completed'
     FE->>BE: GET /api/chat/result/:requestId
     BE-->>FE: Retorna texto y metadatos estructurados
-    FE->>Usuario: Muestra respuesta final en la burbuja del chat
+    FE->>Usuario: Muestra respuesta final limpia con fuentes exactas
 ```
 
 ---
 
-## 🔧 Flujo Interno de Ejecución (`ToolLoop`)
+## 🔧 Flujo Interno de Ejecución del Agente (`ToolLoop`)
 
-Cuando una consulta requiere extraer información externa o consultar bases de datos, el orquestador backend corre un flujo iterativo cerrado con protección de subdominios y listas negras:
+El orquestador backend corre un flujo iterativo cerrado de máximo 8 interacciones donde el modelo decide qué herramientas MCP utilizar de forma secuencial y determinista:
 
 ```mermaid
 flowchart TD
@@ -147,46 +126,176 @@ flowchart TD
 
 ---
 
-## 🛠️ Requisitos e Instalación Quickstart
+## 🛠️ Instalación y Despliegue de la Versión Web
 
-### 1. Clonar y variables de entorno
-```bash
-git clone [https://github.com/Zastha/MCP-Web-Deployment.git](https://github.com/Zastha/MCP-Web-Deployment.git)
-cd MCP-Web-Deployment
-```
+### 1. Variables de Entorno (`.env`)
+Configura tu archivo `.env` en la raíz de la carpeta `backend/`. Parametriza tus API Keys y tus **rutas absolutas locales** para mapear los directorios del Filesystem y volúmenes de Docker:
 
-Configura un archivo `.env` en la carpeta `backend/` con tus credenciales:
 ```env
 PORT=3000
 NODE_ENV=development
-MONGODB_URI=tu_conexion_mongodb
+MONGODB_URI=mongodb+srv://<USER>:<PASSWORD>@mcp-cluster.xxxx.mongodb.net/?retryWrites=true&w=majority
 MONGODB_DB_NAME=MCP-Server
-ANTHROPIC_API_KEY=tu_key_claude
-OPENAI_API_KEY=tu_key_gpt
-GOOGLE_API_KEY=tu_key_gemini
+ANTHROPIC_API_KEY=tu_key_anthropic_claude
+OPENAI_API_KEY=tu_key_openai_gpt
+GOOGLE_API_KEY=tu_key_google_gemini
+MISTRAL_API_KEY=tu_key_mistral_ocr
+
+# Control de Whitelist
 WHITELIST_ENFORCEMENT_ENABLED=true
 MAX_SUBDOMAINS_PER_REQUEST=3
+
+# Mapeo Parametrizado de Directorios Locales (Portabilidad)
+MCP_FS_BACKEND_PATH=C:/Ruta/A/Tu/Proyecto/backend
+MCP_FS_WORK_PATH=C:/Ruta/A/Tu/Directorio/Work
+MCP_FS_PROJECTS_PATH=C:/Ruta/A/Tu/Directorio/Projects
+MCP_OCR_VOLUME_PATH=C:/Ruta/A/Tu/Directorio/OCR_Files
 ```
 
-### 2. Levantar el Backend
+### 2. Preparación de Infraestructura Docker
+Antes de lanzar el servidor, debes pre-construir de forma local las imágenes personalizadas descritas en tu configuración:
+
 ```bash
-cd backend
+# A) Construir microservicio local de Visión
+cd VisionMCP
+docker build -t pdf-vision-mcp:latest .
+
+# B) Construir utilidades de scraping y OCR estructurado
+docker build -t csv-editor-mcp .
+docker build -t mcp-mistral-ocr:latest .
+
+# C) Descargar imágenes oficiales de la comunidad
+docker pull mcp/puppeteer:latest
+docker pull mongodb/mongodb-mcp-server:1.6.0-2026-02-21
+```
+
+### 3. Ejecución en modo Local (Web Stack)
+```bash
+# Servidor Backend (API Orquestadora)
+cd ../backend
 npm install
 npm start
-```
 
-### 3. Levantar el Frontend (Vite)
-En otra terminal independiente:
-```bash
-cd frontend
+# Cliente Frontend (Interfaz React)
+cd ../frontend
 npm install
 npm run dev
 ```
 
 ---
 
-## 🧠 Características Especiales Implementadas
+## 🖥️ Integración con Claude Desktop (Modo Agente Autónomo)
 
-* **Identity-Shot Ingestion (Gemini)**: Implementa una inyección artificial dual de inicio de chat (`user`/`model`) para mitigar la autodegradación de prompts del sistema en Gemini 2.5, forzando la consistencia del rol de analista.
-* **Filtro Selectivo de Herramientas (Web Mode)**: Restringe el catálogo global de herramientas a un subset de 16 herramientas esenciales de procesamiento de texto y scraping para OpenAI y Gemini, protegiendo las cuotas críticas de tokens por minuto (TPM).
-* **Mitigación Estricta de Errores de Red**: Mapeo estricto e intercepción transparente en el flujo de ejecución de herramientas para solventar desajustes de nomenclatura por guiones bajos (`_`) introducidos por las limitantes nativas del SDK de Google.
+Para omitir la interfaz web y delegar el control de raspado directamente a la aplicación oficial de **Claude Desktop**, puedes inyectar todo el ecosistema de herramientas MCP configurando un archivo de orquestación central.
+
+### 1. Ubicación del archivo de configuración
+Abre la aplicación Claude Desktop, ve a **Settings**, luego a la pestaña **Developer** y haz clic en **Edit Config**. Esto abrirá de forma automática el explorador de archivos de tu sistema operativo con el archivo `claude_desktop_config.json` seleccionado.
+
+* Rutas por defecto del sistema:
+  * **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+  * **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+### 2. Configuración de Servidores MCP (`claude_desktop_config.json`)
+Sustituye o añade los siguientes servidores dentro del objeto de tu archivo de configuración, asegurando parametrizar tus rutas absolutas y llaves correspondientes de forma limpia:
+
+```json
+{
+  "mcpServers": {
+    "pdf-vision": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "pdf-vision-mcp:latest"
+      ]
+    },
+    "puppeteer": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--init",
+        "-e",
+        "DOCKER_CONTAINER=true",
+        "mcp/puppeteer"
+      ]
+    },
+    "csv-editor": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "csv-editor-mcp"
+      ]
+    },
+    "pdf-reader-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@sylphlab/pdf-reader-mcp"
+      ]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:/Ruta/A/Tu/Directorio/Work",
+        "C:/Ruta/A/Tu/Directorio/Projects"
+      ]
+    },
+    "mistral-ocr": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-p",
+        "8403:8000",
+        "-e",
+        "MISTRAL_API_KEY=TU_API_KEY_MISTRAL",
+        "-e",
+        "OCR_DIR=/data/ocr",
+        "-v",
+        "C:/Ruta/A/Tu/Directorio/OCR_Files:/data/ocr",
+        "mcp-mistral-ocr:latest"
+      ],
+      "env": {
+        "MISTRAL_API_KEY": "TU_API_KEY_MISTRAL",
+        "OCR_DIR": "/data/ocr"
+      }
+    },
+    "MongoDB": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "MDB_MCP_READ_ONLY=false",
+        "-e",
+        "MDB_MCP_API_CLIENT_ID",
+        "-e",
+        "MDB_MCP_API_CLIENT_SECRET",
+        "mongodb/mongodb-mcp-server:latest"
+      ],
+      "env": {
+        "MDB_MCP_API_CLIENT_ID": "tu_mongodb_client_id",
+        "MDB_MCP_API_CLIENT_SECRET": "tu_mongodb_client_secret"
+      }
+    }
+  }
+}
+```
+
+### 3. Inyección Automática de Contexto ("Instructions for Claude")
+Para que Claude comprenda las restricciones de precisión de datos y ejecute de forma transparente el flujo secuencial determinado por tu base de datos en cada nuevo chat, debes inyectar la instrucción de arranque.
+
+Ve a **Settings** -> **Instructions for Claude**, y añade la siguiente directiva:
+
+> *"I am testing a webscraper that follows a specific workflow. The workflow can be found using the mongodb mcp tool following these connection: MCP-cluster -> MCP-server -> Context. This is the Connection String: mongodb+srv://<USER>:<PASSWORD>@mcp-cluster.xxxx.mongodb.net/"*
+
+Al iniciar un hilo conversacional, Claude Desktop detectará automáticamente la presencia de las herramientas MCP (mostrando el icono del clip de herramientas abajo a la derecha), se conectará silenciosamente al clúster para leer las colecciones de contexto y listas de exclusión, operando de forma 100% autónoma y controlada sobre las fuentes confiables.
