@@ -299,3 +299,18 @@ Ve a **Settings** -> **Instructions for Claude**, y añade la siguiente directiv
 > *"I am testing a webscraper that follows a specific workflow. The workflow can be found using the mongodb mcp tool following these connection: MCP-cluster -> MCP-server -> Context. This is the Connection String: mongodb+srv://<USER>:<PASSWORD>@mcp-cluster.xxxx.mongodb.net/"*
 
 Al iniciar un hilo conversacional, Claude Desktop detectará automáticamente la presencia de las herramientas MCP (mostrando el icono del clip de herramientas abajo a la derecha), se conectará silenciosamente al clúster para leer las colecciones de contexto y listas de exclusión, operando de forma 100% autónoma y controlada sobre las fuentes confiables.
+
+---
+
+## 🏫 Créditos y Servicio Social
+
+Este proyecto fue desarrollado bajo el marco institucional del **Tecnológico Nacional de México (TecNM) - Campus Culiacán** como parte del proceso para la liberación del **Servicio Social**.
+
+* **Asesor del Proyecto:** Ricardo Rafael Quintero Meza
+* **Tesista:** Rayo Caldera Retamoza
+* **Encargado del Desarrollo y Arquitectura:** René Zaid Zazueta Rivas
+
+<p>
+  <img src="assets/logo_tecnm_2019.webp" alt="TecNM Campus Culiacán" width="250"/>
+  
+</p>
