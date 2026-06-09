@@ -1,8 +1,6 @@
 import type { LLMProvider } from '../types/chat';
 import './ProviderSelector.css';
-/*Component for selecting the language model provider in the chat interface.
-Displays buttons for each available provider and allows the user to switch between them.
-Handles the selection state and communicates changes back to the parent component.
+/*Componente para la seleccion de proveedor de LLM
 V.1.0.0
 08/02/2026
 */

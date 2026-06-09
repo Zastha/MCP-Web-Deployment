@@ -3,7 +3,6 @@ dotenv.config();
 
 export const mcpConfig = {
   servers: [
-    // Filesystem - Sin Docker
     {
       name: 'filesystem',
       type: 'stdio',
@@ -17,7 +16,6 @@ export const mcpConfig = {
       ]
     },
     
-    // PDF Reader - Sin Docker
     {
       name: 'pdf-reader',
       type: 'stdio',
@@ -27,8 +25,23 @@ export const mcpConfig = {
         '@sylphlab/pdf-reader-mcp'
       ]
     },
+
+    {
+      name: 'pdf-vision',
+      type: 'docker',
+      docker: {
+        image: 'pdf-vision-mcp:latest',
+        env: {}
+      },
+      command: 'docker',
+      args: [
+        'run',
+        '-i',
+        '--rm',
+        'pdf-vision-mcp:latest'
+      ]
+    },
     
-    // Puppeteer - CON Docker
     {
       name: 'puppeteer',
       type: 'docker',
@@ -50,7 +63,6 @@ export const mcpConfig = {
       ]
     },
     
-    // Mistral OCR - CON Docker
     {
       name: 'mistral-ocr',
       type: 'docker',
@@ -80,7 +92,6 @@ export const mcpConfig = {
       ]
     },
     
-    // MongoDB - CON Docker
     {
       name: 'mongodb',
       type: 'docker',
@@ -110,7 +121,6 @@ export const mcpConfig = {
       ]
     },
     
-    // CSV Editor - CON Docker
     {
       name: 'csv-editor',
       type: 'docker',

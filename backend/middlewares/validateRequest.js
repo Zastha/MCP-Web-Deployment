@@ -126,7 +126,6 @@ export function validateRequest(req, res, next) {
     }
   }
 
-  // Si todo está bien, continuar
   next();
 }
 

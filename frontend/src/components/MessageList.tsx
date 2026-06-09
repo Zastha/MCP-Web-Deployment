@@ -1,9 +1,7 @@
 import type{ Message } from '../types/chat';
 import './MessageList.css';
 
-/*Component for displaying the list of messages in the chat interface.
-Receives an array of messages as props and renders them in a styled format.
-Handles both user and assistant messages, showing the role and content of each message.
+/*Componente mostrando la lista de mensajes en la interfaz de chat 
 V.1.0.0
 08/02/2026*/
 

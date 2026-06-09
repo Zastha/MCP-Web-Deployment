@@ -1,8 +1,10 @@
+# --- JavaScript / Node.js (Raíz, Frontend, Backend) ---
 node_modules/
 **/node_modules/
 package-lock.json
 **/package-lock.json
 
+# --- Variables de Entorno ---
 .env
 .env.local
 .env.development.local
@@ -11,12 +13,14 @@ package-lock.json
 **/.env
 **/.env.local
 
+# --- Compilación y Salidas ---
 dist/
 build/
 **/dist/
 **/build/
 dist-ssr/
 
+# --- Logs ---
 logs/
 *.log
 npm-debug.log*
@@ -24,16 +28,19 @@ yarn-debug.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# --- Caché de Herramientas y Herramientas de Build ---
 .npm/
 .npx/
 .vite/
 .cache/
 **/.vite/
 
+# --- Cobertura de Pruebas ---
 coverage/
 .nyc_output/
 **/coverage/
 
+# --- Archivos del Sistema Operativo ---
 .DS_Store
 Thumbs.db
 Desktop.ini
@@ -41,6 +48,7 @@ Desktop.ini
 *.swo
 *~
 
+# --- Configuración de IDEs  ---
 .vscode/
 .idea/
 *.sublime-project
@@ -54,6 +62,17 @@ Desktop.ini
 *.sln
 *.sw?
 
+# --- Temporales Generales ---
 *.tmp
 *.temp
 .cache/
+
+# --- Python: VisionMCP ---
+VisionMCP/.venv/
+VisionMCP/__pycache__/
+VisionMCP/.pytest_cache/
+VisionMCP/output_images/
+
+# --- Reglas globales de Python por si acaso en backend/ ---
+*.py[cod]
+__pycache__/

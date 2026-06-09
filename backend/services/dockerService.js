@@ -67,7 +67,7 @@ class DockerService {
     
     return true;
   } catch (error) {
-    return true; // Si hay error, asumir que está disponible
+    return true; 
   }
 }
 
@@ -126,12 +126,10 @@ class DockerService {
         }
       };
 
-      // Agregar volúmenes si existen
       if (volumes.length > 0) {
         createOptions.HostConfig.Binds = volumes;
       }
 
-      // Agregar puertos si existen
       if (ports.length > 0) {
         createOptions.ExposedPorts = {};
         createOptions.HostConfig.PortBindings = {};

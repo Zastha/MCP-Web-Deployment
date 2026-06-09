@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { logger } from '../utils/logger.js';
+import { env }    from '../config/environment.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,6 +51,34 @@ function normalizeContextValue(value) {
   return null;
 }
 
+/**
+ * Sustituye placeholders {{VAR_NAME}} en un string de contexto
+ * por los valores correspondientes del entorno (.env).
+ *
+ * Placeholders soportados:
+ *   {{MONGODB_URI}}      → env.MONGODB_URI
+ *   {{MONGODB_DB_NAME}}  → env.MONGODB_DB_NAME
+ *
+ */
+function resolveEnvPlaceholders(text) {
+  if (typeof text !== 'string') return text;
+
+  const placeholders = {
+    MONGODB_URI:     env.MONGODB_URI     || '',
+    MONGODB_DB_NAME: env.MONGODB_DB_NAME || '',
+  };
+
+  return text.replace(/\{\{([A-Z_]+)\}\}/g, (match, key) => {
+    if (Object.prototype.hasOwnProperty.call(placeholders, key)) {
+      if (!placeholders[key]) {
+        logger.warn(`contextService: placeholder {{${key}}} no tiene valor en .env`);
+      }
+      return placeholders[key];
+    }
+    return match;
+  });
+}
+
 function buildContextMap(parsed) {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('El archivo de contextos debe ser un objeto JSON con llaves de contexto.');
@@ -85,9 +114,11 @@ function buildContextMap(parsed) {
 
 async function loadContexts(filePath = defaultContextFilePath) {
   if (cachedContexts && cachedPath === filePath) {
+    logger.info(`📋 contextService: loadContexts CACHE HIT → ${filePath}`);
     return cachedContexts;
   }
 
+  logger.info(`📋 contextService: loadContexts READING FILE → ${filePath}`);
   const raw = await fs.readFile(filePath, 'utf-8');
   const parsed = JSON.parse(raw);
   const contexts = buildContextMap(parsed);
@@ -112,7 +143,15 @@ async function getInitialContext(contextKey = 'default', filePath) {
       logger.warn(`contextKey "${contextKey}" no encontrado. Se usará "default".`);
     }
 
-    return normalizeContextValue(selectedContext);
+    const rawContext = normalizeContextValue(selectedContext);
+    const resolved = resolveEnvPlaceholders(rawContext);
+
+    logger.info(
+      `📋 contextService: key="${contextKey}" | cache=${cachedContexts ? 'HIT' : 'MISS'} | ` +
+      `chars=${resolved ? resolved.length : 0} | preview="${resolved ? resolved.slice(0, 60).replace(/\n/g, ' ') : 'NULL'}..."`
+    );
+
+    return resolved;
   } catch (error) {
     logger.warn(`No se pudo cargar contexto inicial JSON: ${error.message}`);
     return null;

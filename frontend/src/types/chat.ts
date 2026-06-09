@@ -1,13 +1,12 @@
-/*Typescript interfaces for chat application responses and messages.
-Defines the structure of messages exchanged between the user and the assistant,
-as well as the expected format of API responses and errors. 
+/* Interfaces de TypeScript para respuestas y mensajes de la aplicación de chat.
+Define la estructura de los mensajes intercambiados entre el usuario y el asistente,
+como well como el formato esperado de las respuestas de la API y los errores.
 V.1.0.0
 08/02/2026
-Added LLMProvider type to specify which language model provider is being used in the chat interactions.
+Agregado el tipo LLMProvider para especificar qué proveedor de modelo de lenguaje se está utilizando en las interacciones del chat.
 v.1.1.0
 20/02/2026
 */
-
 export type LLMProvider = 'claude' | 'gemini' | 'openai';
 export interface Message {
   role: 'user' | 'assistant';

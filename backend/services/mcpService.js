@@ -198,13 +198,63 @@ class MCPService {
   }
 
   getToolsForClaude() {
+    const EXCLUDED_MCPS  = new Set(['mongodb']);
+    const EXCLUDED_TOOLS = new Set([
+      'pdf_render_page_roi_high_quality',
+      'pdf_render_page_roi_low_quality',
+      'pdf_render_page',
+      'pdf_render_pages_range',
+      'pdf_get_page_count',
+    ]);
+
     return this.tools
-      .filter((tool) => typeof tool?.name === 'string' && tool.name.trim().length > 0)
+      .filter((tool) =>
+        typeof tool?.name === 'string' &&
+        tool.name.trim().length > 0 &&
+        !EXCLUDED_MCPS.has(tool.mcpSource) &&
+        !EXCLUDED_TOOLS.has(tool.name)
+      )
       .map((tool) => ({
-        name: tool.name,
-        description: tool.description || '',
+        name:         tool.name,
+        description:  tool.description || '',
         input_schema: this.normalizeJsonSchema(tool.inputSchema),
       }));
+  }
+
+  /**
+   * Subset de tools para OpenAI y Gemini.
+   * Solo 16 tools esenciales del workflow de webscraping.
+   * Razon: con 104 tools el payload consume ~18,000 tokens antes de procesar
+   * el mensaje del usuario — superando el límite de 30,000 TPM.
+   */
+  static get OPENAI_ALLOWED_TOOLS() {
+    return new Set([
+      'connect', 'find', 'insert-many',
+      'puppeteer_navigate', 'puppeteer_screenshot', 'puppeteer_evaluate',
+      'read_pdf',
+      'process_url_file', 'process_local_file',
+      'load_csv_from_url', 'filter_rows', 'select_columns',
+      'read_file', 'list_directory',
+    ]);
+  }
+
+  getToolsForOpenAI() {
+    const allowed = MCPService.OPENAI_ALLOWED_TOOLS;
+    return this.tools
+      .filter((tool) =>
+        typeof tool?.name === 'string' &&
+        tool.name.trim().length > 0 &&
+        allowed.has(tool.name)
+      )
+      .map((tool) => ({
+        name:        tool.name,
+        description: tool.description || '',
+        inputSchema: tool.inputSchema  || {}
+      }));
+  }
+
+  getToolsForGemini() {
+    return this.getToolsForOpenAI();
   }
 
   getToolsGroupedByMCP() {
@@ -247,6 +297,7 @@ class MCPService {
   }
 
   async callTool(toolName, args) {
+    logger.info(`🔧 callTool: ${toolName}`, JSON.stringify(args, null, 2));
     const tool = this.tools.find(t => t.name === toolName);
     
     if (!tool) {

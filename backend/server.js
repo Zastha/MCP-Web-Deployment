@@ -5,7 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import { env } from './config/environment.js';
 import chatRoutes from './routes/chatRoutes.js';
-import errorHandler from './middlewares/errorHandler.js';
+import errorHandler from './middlewares/errorhandler.js';
 import { mcpService } from './services/mcpService.js';
 import { logger } from './utils/logger.js';
 
